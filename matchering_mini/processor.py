@@ -34,9 +34,11 @@ from matchering.stage_helpers import (
 )
 from matchering.limiter import limit
 
+from settings import SETTINGS
+
 
 def __match_levels(
-    target: np.ndarray, reference: np.ndarray, config: Config
+    target: np.ndarray, reference: np.ndarray, target_rms: float, config: Config
 ) -> (
     np.ndarray,
     np.ndarray,
@@ -80,11 +82,17 @@ def __match_levels(
     rms_coefficient, target_mid, target_side = get_rms_c_and_amplify_pair(
         target_mid,
         target_side,
-        target_match_rms,
+        target_match_rms * 0.3 + target_rms * 0.7,
         reference_match_rms,
         config.min_value,
         "target",
     )
+
+    print(rms_coefficient)
+    if SETTINGS['CURRENT_RMS'] is None:
+        SETTINGS['CURRENT_RMS'] = rms_coefficient
+    else:
+        SETTINGS['CURRENT_RMS'] = SETTINGS['CURRENT_RMS'] * 0.3 + rms_coefficient * 0.7
 
     debug("Modifying the amplitudes of the extracted loudest TARGET pieces...")
     target_mid_loudest_pieces = amplify(target_mid_loudest_pieces, rms_coefficient)
@@ -214,28 +222,33 @@ def main(
     need_default: bool = True,
     need_no_limiter: bool = False,
     need_no_limiter_normalized: bool = False,
+    _target_mid_loudest_pieces: np.ndarray = None,
+    _target_side_loudest_pieces: np.ndarray = None,
+    _reference_match_rms: float = None,
+    _target_rms: float = None,
+    _final_amplitude_coefficient: float = None
 ) -> (np.ndarray, np.ndarray, np.ndarray):
     (
         target_mid,
         target_side,
         final_amplitude_coefficient,
-        target_mid_loudest_pieces,
-        target_side_loudest_pieces,
+        _target_mid_loudest_pieces,
+        _target_side_loudest_pieces,
         reference_mid_loudest_pieces,
         reference_side_loudest_pieces,
         target_divisions,
         target_piece_size,
-        reference_match_rms,
-    ) = __match_levels(target, reference, config)
+        _reference_match_rms,
+    ) = __match_levels(target, reference, _target_rms, config)
 
     del target, reference
 
     result_no_limiter, result_no_limiter_mid = __match_frequencies(
         target_mid,
         target_side,
-        target_mid_loudest_pieces,
+        _target_mid_loudest_pieces,
         reference_mid_loudest_pieces,
-        target_side_loudest_pieces,
+        _target_side_loudest_pieces,
         reference_side_loudest_pieces,
         config,
     )
@@ -243,9 +256,9 @@ def main(
     del (
         target_mid,
         target_side,
-        target_mid_loudest_pieces,
+        _target_mid_loudest_pieces,
         reference_mid_loudest_pieces,
-        target_side_loudest_pieces,
+        _target_side_loudest_pieces,
         reference_side_loudest_pieces,
     )
 
@@ -254,7 +267,7 @@ def main(
         result_no_limiter_mid,
         target_divisions,
         target_piece_size,
-        reference_match_rms,
+        _reference_match_rms,
         config,
     )
 
@@ -262,7 +275,7 @@ def main(
 
     result, result_no_limiter, result_no_limiter_normalized = __finalize(
         result_no_limiter,
-        final_amplitude_coefficient,
+        _final_amplitude_coefficient * 0.6 + final_amplitude_coefficient * 0.4,
         need_default,
         need_no_limiter,
         need_no_limiter_normalized,
