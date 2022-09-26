@@ -97,8 +97,8 @@ def __match_levels(
     if SETTINGS['CURRENT_RMS_COEFFICIENT'] is None:
         SETTINGS['CURRENT_RMS_COEFFICIENT'] = main_rms_coefficient
     else:
-        SETTINGS['CURRENT_RMS_COEFFICIENT'] = main_rms_coefficient * 0.02 + \
-                                              SETTINGS['CURRENT_RMS_COEFFICIENT'] * 0.9 + rms_coefficient * 0.08
+        SETTINGS['CURRENT_RMS_COEFFICIENT'] = main_rms_coefficient * 0.06 + \
+                                              SETTINGS['CURRENT_RMS_COEFFICIENT'] * 0.9 + rms_coefficient * 0.04
 
     debug("Modifying the amplitudes of the extracted loudest TARGET pieces...")
     target_mid_loudest_pieces = amplify(target_mid_loudest_pieces, SETTINGS['CURRENT_RMS_COEFFICIENT'])
@@ -137,6 +137,16 @@ def __match_frequencies(
         target_side_loudest_pieces, reference_side_loudest_pieces, "side", config
     )
 
+    if SETTINGS['MID_FIR'] is None:
+        SETTINGS['MID_FIR'] = mid_fir
+    else:
+        SETTINGS['MID_FIR'] = (SETTINGS['MID_FIR'] * 9 + mid_fir) / 10
+
+    if SETTINGS['SIDE_FIR'] is None:
+        SETTINGS['SIDE_FIR'] = side_fir
+    else:
+        SETTINGS['SIDE_FIR'] = (SETTINGS['SIDE_FIR'] * 9 + side_fir) / 10
+
     del (
         target_mid_loudest_pieces,
         reference_mid_loudest_pieces,
@@ -144,7 +154,7 @@ def __match_frequencies(
         reference_side_loudest_pieces,
     )
 
-    result, result_mid = convolve(target_mid, mid_fir, target_side, side_fir)
+    result, result_mid = convolve(target_mid, SETTINGS['MID_FIR'], target_side, SETTINGS['SIDE_FIR'])
 
     return result, result_mid
 
@@ -172,10 +182,13 @@ def __correct_levels(
             clipped_rmses, clipped_average_rms
         )
 
+        SETTINGS['CURRENT_RMS_COEFFICIENT'] = SETTINGS['CURRENT_RMS_COEFFICIENT'] * 0.95 + \
+                                              result_mid_clipped_match_rms * 0.05
+
         rms_coefficient, result_mid, result = get_rms_c_and_amplify_pair(
             result_mid,
             result,
-            result_mid_clipped_match_rms,
+            SETTINGS['CURRENT_RMS_COEFFICIENT'],
             reference_match_rms,
             config.min_value,
             "result",
@@ -226,7 +239,7 @@ def main(
     reference: np.ndarray,
     config: Config,
     need_default: bool = True,
-    need_no_limiter: bool = False,
+    need_no_limiter: bool = True,
     need_no_limiter_normalized: bool = False,
     _target_mid_loudest_pieces: np.ndarray = None,
     _target_side_loudest_pieces: np.ndarray = None,
@@ -250,12 +263,24 @@ def main(
 
     del target, reference
 
+    if SETTINGS['TARGET_MID_LOUDEST_PIECES'] is None:
+        SETTINGS['TARGET_MID_LOUDEST_PIECES'] = _target_mid_loudest_pieces
+    else:
+        SETTINGS['TARGET_MID_LOUDEST_PIECES'] = (SETTINGS['TARGET_MID_LOUDEST_PIECES'] * 9 +
+                                                 _target_mid_loudest_pieces) / 10
+
+    if SETTINGS['TARGET_SIDE_LOUDEST_PIECES'] is None:
+        SETTINGS['TARGET_SIDE_LOUDEST_PIECES'] = _target_side_loudest_pieces
+    else:
+        SETTINGS['TARGET_SIDE_LOUDEST_PIECES'] = (SETTINGS['TARGET_SIDE_LOUDEST_PIECES'] * 9 +
+                                                  _target_side_loudest_pieces) / 10
+
     result_no_limiter, result_no_limiter_mid = __match_frequencies(
         target_mid,
         target_side,
-        _target_mid_loudest_pieces,
+        SETTINGS['TARGET_MID_LOUDEST_PIECES'],
         reference_mid_loudest_pieces,
-        _target_side_loudest_pieces,
+        SETTINGS['TARGET_SIDE_LOUDEST_PIECES'],
         reference_side_loudest_pieces,
         config,
     )

@@ -73,7 +73,7 @@ def play(args, strm):
             x = processor.main(
                 data,
                 reference.transpose(1, 0).astype('float32'),
-                matchering.core.Config(),
+                matchering.core.Config(fft_size=1024, lowess_delta=0.050, rms_correction_steps=6),
                 need_default=True,
                 _target_mid_loudest_pieces=mid_loudest_pieces,
                 _target_side_loudest_pieces=side_loudest_pieces,
@@ -81,7 +81,7 @@ def play(args, strm):
                 _target_rms=match_rms,
                 _rms_coefficient=rms_coefficient,
                 _final_amplitude_coefficient=final_amplitude_coefficient
-            )[0].copy(order='C').astype('float32')
+            )[1].copy(order='C').astype('float32')
             outdata[:] = x
         except queue.Empty as e:
             print('Buffer is empty: increase buffersize?', file=sys.stderr)
