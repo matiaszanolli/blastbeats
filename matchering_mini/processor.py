@@ -38,7 +38,7 @@ from settings import SETTINGS
 
 
 def __match_levels(
-    target: np.ndarray, reference: np.ndarray, target_rms: float, config: Config
+    target: np.ndarray, reference: np.ndarray, target_rms: float, main_rms_coefficient: float, config: Config
 ) -> (
     np.ndarray,
     np.ndarray,
@@ -79,24 +79,30 @@ def __match_levels(
         *_,
     ) = analyze_levels(reference, "reference", config)
 
+    if SETTINGS['CURRENT_RMS'] is None:
+        SETTINGS['CURRENT_RMS'] = target_rms
+    else:
+        SETTINGS['CURRENT_RMS'] = target_rms * 0.02 + \
+                                              SETTINGS['CURRENT_RMS'] * 0.9 + target_match_rms * 0.08
+
     rms_coefficient, target_mid, target_side = get_rms_c_and_amplify_pair(
         target_mid,
         target_side,
-        target_match_rms * 0.3 + target_rms * 0.7,
+        SETTINGS['CURRENT_RMS'],
         reference_match_rms,
         config.min_value,
         "target",
     )
 
-    print(rms_coefficient)
-    if SETTINGS['CURRENT_RMS'] is None:
-        SETTINGS['CURRENT_RMS'] = rms_coefficient
+    if SETTINGS['CURRENT_RMS_COEFFICIENT'] is None:
+        SETTINGS['CURRENT_RMS_COEFFICIENT'] = main_rms_coefficient
     else:
-        SETTINGS['CURRENT_RMS'] = SETTINGS['CURRENT_RMS'] * 0.3 + rms_coefficient * 0.7
+        SETTINGS['CURRENT_RMS_COEFFICIENT'] = main_rms_coefficient * 0.02 + \
+                                              SETTINGS['CURRENT_RMS_COEFFICIENT'] * 0.9 + rms_coefficient * 0.08
 
     debug("Modifying the amplitudes of the extracted loudest TARGET pieces...")
-    target_mid_loudest_pieces = amplify(target_mid_loudest_pieces, rms_coefficient)
-    target_side_loudest_pieces = amplify(target_side_loudest_pieces, rms_coefficient)
+    target_mid_loudest_pieces = amplify(target_mid_loudest_pieces, SETTINGS['CURRENT_RMS_COEFFICIENT'])
+    target_side_loudest_pieces = amplify(target_side_loudest_pieces, SETTINGS['CURRENT_RMS_COEFFICIENT'])
 
     return (
         target_mid,
@@ -226,6 +232,7 @@ def main(
     _target_side_loudest_pieces: np.ndarray = None,
     _reference_match_rms: float = None,
     _target_rms: float = None,
+    _rms_coefficient: float = None,
     _final_amplitude_coefficient: float = None
 ) -> (np.ndarray, np.ndarray, np.ndarray):
     (
@@ -239,7 +246,7 @@ def main(
         target_divisions,
         target_piece_size,
         _reference_match_rms,
-    ) = __match_levels(target, reference, _target_rms, config)
+    ) = __match_levels(target, reference, _target_rms, _rms_coefficient, config)
 
     del target, reference
 
@@ -273,9 +280,15 @@ def main(
 
     del result_no_limiter_mid
 
+    if not SETTINGS['AMPLITUDE_COEFFICIENT']:
+        SETTINGS['AMPLITUDE_COEFFICIENT'] = _final_amplitude_coefficient
+    else:
+        SETTINGS['AMPLITUDE_COEFFICIENT'] = SETTINGS['AMPLITUDE_COEFFICIENT'] * 0.9 + \
+                                            _final_amplitude_coefficient * 0.04 + final_amplitude_coefficient * 0.06
+
     result, result_no_limiter, result_no_limiter_normalized = __finalize(
         result_no_limiter,
-        _final_amplitude_coefficient * 0.6 + final_amplitude_coefficient * 0.4,
+        SETTINGS['AMPLITUDE_COEFFICIENT'],
         need_default,
         need_no_limiter,
         need_no_limiter_normalized,

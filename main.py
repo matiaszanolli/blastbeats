@@ -15,7 +15,7 @@ import ffmpegio
 import sounddevice as sd
 from argparse import ArgumentParser
 
-CHUNK_SIZE = 65536
+CHUNK_SIZE = 32768
 # q = queue.Queue(maxsize=16384)
 MATCH_SAMPLE, MATCH_SR = librosa.load('samples/crow3.wav', mono=False)
 
@@ -77,6 +77,7 @@ def play(args, strm):
                 _target_side_loudest_pieces=side_loudest_pieces,
                 _reference_match_rms=reference_match_rms,
                 _target_rms=match_rms,
+                _rms_coefficient=rms_coefficient,
                 _final_amplitude_coefficient=final_amplitude_coefficient
             )[0].copy(order='C').astype('float32')
             outdata[:] = x

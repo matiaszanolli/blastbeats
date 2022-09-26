@@ -2,7 +2,8 @@ def get_settings():
     return {
         "MATCH_CONTEXT_SCALE": 50,
         "CURRENT_RMS": None,
-        "AMPLITUDE_COEFFICIENT": 1,
+        "CURRENT_RMS_COEFFICIENT": None,
+        "AMPLITUDE_COEFFICIENT": None,
     }
 
 
