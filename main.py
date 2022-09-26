@@ -7,13 +7,15 @@ import threading
 import traceback
 
 import numpy as np
-from matchering_mini import processor
 import matchering
 from matchering.stage_helpers.match_levels import get_rms_c_and_amplify_pair
 import librosa
 import ffmpegio
 import sounddevice as sd
 from argparse import ArgumentParser
+
+from matchering_mini import processor
+from gui import GUI
 
 CHUNK_SIZE = 32768
 # q = queue.Queue(maxsize=16384)
@@ -81,7 +83,6 @@ def play(args, strm):
                 _final_amplitude_coefficient=final_amplitude_coefficient
             )[0].copy(order='C').astype('float32')
             outdata[:] = x
-            # outdata[:] = d1
         except queue.Empty as e:
             print('Buffer is empty: increase buffersize?', file=sys.stderr)
             raise sd.CallbackAbort from e
@@ -156,4 +157,4 @@ def run(args, strm):
 
 if __name__ == '__main__':
     args, stream = parse_args()
-    run(args, stream)
+    GUI(run, args, stream)

@@ -3,6 +3,7 @@ audioread>=3.0.0
 certifi @ file:///C:/b/abs_4f5wo627a3/croots/recipe/certifi_1663615677642/work/certifi
 cffi>=1.15.1
 charset-normalizer==2.1.1
+customtkinter>=4.6.3
 decorator==5.1.1
 ffmpeg>=1.4
 ffmpegio>=0.7.0
