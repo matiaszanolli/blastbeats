@@ -1,3 +1,5 @@
+### Note: I'm deprecating this project as I remade it from scratch (with much better results) up for grabs for everyone in https://github.com/matiaszanolli/Auralis
+
 # BLASTbeats
 
 ## Remaster your music while you listen to it. Real time.
